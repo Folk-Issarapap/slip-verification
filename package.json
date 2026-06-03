@@ -1,0 +1,28 @@
+{
+  "name": "bropay",
+  "private": true,
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "dev:api": "turbo dev --filter=api",
+    "dev:admin": "turbo dev --filter=admin",
+    "lint": "turbo lint",
+    "typecheck": "turbo typecheck",
+    "test": "turbo test",
+    "e2e": "pnpm --filter admin e2e",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.15",
+    "@vitest/coverage-v8": "^4.1.7",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.0.5",
+    "turbo": "^2.9.14"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "biome check --write --no-errors-on-unmatched"
+    ]
+  },
+  "packageManager": "pnpm@10.8.0"
+}

@@ -1,0 +1,15 @@
+// no-tailwind-v3-gradient.grit
+//
+// Intended rule: Block Tailwind v3 bg-gradient-to-* gradient syntax.
+// Project runs Tailwind v4 which uses bg-linear-to-* instead.
+//
+// NOTE: Biome 2.4's GritQL plugin engine does not yet emit diagnostics for pattern-match
+// rules — the plugin/plugin rule runs but pattern matching is non-functional. Actual
+// enforcement lives in .husky/lint-conventions.mjs (grep on staged files). When Biome's
+// GritQL matcher matures, the pattern below can replace the grep approach automatically.
+
+language js
+
+`className=$cls` where {
+  $cls <: r"\"[^\"]*bg-gradient-to-[a-z]+[^\"]*\""
+}

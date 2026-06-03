@@ -1,0 +1,41 @@
+{
+  "name": "api",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist-types/index.d.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "dev": "wrangler dev --port 8787",
+    "types": "wrangler types",
+    "lint": "biome lint ./src",
+    "lint:fix": "biome lint --write ./src",
+    "format": "biome format --write ./src",
+    "check": "biome check ./src",
+    "check:fix": "biome check --write ./src",
+    "typecheck": "NODE_OPTIONS=--max-old-space-size=8192 tsc --noEmit",
+    "build:types": "NODE_OPTIONS=--max-old-space-size=8192 tsc --build tsconfig.build.json",
+    "test": "vitest run src/lib src/middleware src/*.test.ts src/test/*.test.ts"
+  },
+  "dependencies": {
+    "@hono/zod-openapi": "^1.4.0",
+    "@scalar/hono-api-reference": "^0.10.19",
+    "@types/react": "^19.2.15",
+    "hono": "^4.12.22",
+    "react": "19.2.6",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260524.1",
+    "@types/node": "^25.9.1",
+    "@vitest/coverage-v8": "^4.1.7",
+    "@workspace/typescript-config": "workspace:*",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.7",
+    "wrangler": "^4.94.0"
+  }
+}

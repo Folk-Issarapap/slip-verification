@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180" fill="none">
+  <!-- iOS home-screen icon: bigger canvas, rounder radius, same mark -->
+  <rect x="0" y="0" width="180" height="180" rx="40" fill="#2f8a93"/>
+  <g transform="translate(42 42) scale(3.0)">
+    <circle cx="11" cy="16" r="7" fill="none" stroke="#ffffff" stroke-width="2.2" opacity="0.95"/>
+    <circle cx="21" cy="16" r="7" fill="none" stroke="#ffffff" stroke-width="2.2" opacity="0.6"/>
+    <path d="M15 12.8 L19 16 L15 19.2"
+          fill="none" stroke="#ffffff" stroke-width="2.4"
+          stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>

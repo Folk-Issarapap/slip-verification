@@ -1,0 +1,35 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "api",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["dev:api"],
+      "port": 8787
+    },
+    {
+      "name": "admin",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["dev:admin"],
+      "port": 3000
+    },
+    {
+      "name": "merchant",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["dev:merchant"],
+      "port": 3001
+    },
+    {
+      "name": "checkout",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["dev:checkout"],
+      "port": 3003
+    },
+    {
+      "name": "reseller",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["dev:reseller"],
+      "port": 3002
+    }
+  ]
+}

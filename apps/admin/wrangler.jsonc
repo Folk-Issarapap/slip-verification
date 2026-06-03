@@ -1,0 +1,20 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "bropay-admin",
+  "compatibility_date": "2026-02-12",
+  "compatibility_flags": ["nodejs_compat"],
+  "main": "worker/index.ts",
+  "kv_namespaces": [
+    {
+      "binding": "CACHE",
+      "id": "${ADMIN_KV_ID}"
+    }
+  ],
+  "routes": [{ "pattern": "${ADMIN_ROUTE_DOMAIN}", "custom_domain": true }],
+  "env": {
+    "staging": {
+      "name": "bropay-admin-staging",
+      "routes": [{ "pattern": "${ADMIN_ROUTE_DOMAIN}", "custom_domain": true }]
+    }
+  }
+}

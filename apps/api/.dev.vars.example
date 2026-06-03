@@ -1,0 +1,54 @@
+# Copy to .dev.vars and fill in values — never commit .dev.vars
+ENVIRONMENT=local
+# Comma-separated. Trailing whitespace per entry is trimmed by the API at runtime.
+# Add every dev UI origin (scheme+host+port); path is not part of origin.
+# Examples: http://localhost:3000,http://localhost:3001,http://localhost:3002,http://localhost:3003
+ALLOWED_ORIGINS=http://localhost:3000,http://localhost:3001,http://localhost:3002,http://localhost:3003
+
+# JWT signing secret — must be ≥32 chars in production.
+JWT_SECRET=your-jwt-secret-min-32-chars-change-in-production
+
+# Encryption key for secrets at rest (AES-256-GCM). Must be ≥32 chars AND distinct from JWT_SECRET.
+ENCRYPTION_KEY=local-dev-encryption-key-at-least-32-characters-long
+
+GOOGLE_CLIENT_ID=your-google-client-id
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+GOOGLE_REDIRECT_URI=http://localhost:8787/v1/auth/google/callback
+
+# Admin dashboard origin — used in password-reset email URLs and CORS.
+WEB_URL=http://localhost:3000
+# Merchant dashboard origin (invitation accept URLs). Defaults to WEB_URL when unset.
+MERCHANT_WEB_URL=http://localhost:3001
+
+# Public CDN base for the R2 ASSETS_BUCKET (avatars, logos).
+ASSETS_URL=http://localhost:8787/assets
+
+# Outbound transactional email via Cloudflare Email Service (beta).
+# Requires the Workers Paid plan to send to arbitrary recipients.
+# The sending domain must be verified in the Cloudflare dashboard before use.
+# Leave both blank locally — invitation + password-reset URLs still log to the
+# console when ENVIRONMENT=local.
+CF_API_TOKEN=
+# Your Cloudflare account ID (found in the Cloudflare dashboard sidebar).
+CF_ACCOUNT_ID=
+EMAIL_FROM=noreply@example.com
+
+# --- Platform fees (aligned with `src/lib/env.ts` + `wrangler.jsonc` `vars`) ---
+# Used when POST /v1/admin/merchants seeds two `fee_configurations` rows and when no DB row matches (resolveFeeConfig).
+PLATFORM_FEE_INBOUND_PCT=1.5
+PLATFORM_FEE_INBOUND_FLAT=0
+PLATFORM_FEE_OUTBOUND_PCT=1.5
+PLATFORM_FEE_OUTBOUND_FLAT=0
+
+# Platform default per-transaction amount limits (satang; 100 satang = ฿1)
+PLATFORM_MIN_DEPOSIT=5000
+PLATFORM_MAX_DEPOSIT=10000000
+PLATFORM_MIN_WITHDRAWAL=10000
+PLATFORM_MAX_WITHDRAWAL=50000000
+PLATFORM_MIN_PAYOUT=1000
+PLATFORM_MAX_PAYOUT=50000000
+PLATFORM_MIN_PAYMENT=5000
+PLATFORM_MAX_PAYMENT=10000000
+# Minimum fee % for merchant-scoped configs (admin + reseller sub-merchants). 0 = no floor.
+PLATFORM_MIN_FEE_INBOUND_PCT=0
+PLATFORM_MIN_FEE_OUTBOUND_PCT=0

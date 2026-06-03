@@ -1,0 +1,2 @@
+pnpm exec lint-staged --no-stash
+node .husky/lint-conventions.mjs

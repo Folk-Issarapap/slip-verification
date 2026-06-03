@@ -1,0 +1,30 @@
+node_modules/
+.pnpm-store/
+.wrangler/
+.turbo/
+.bropay-preview/
+dist/
+.next/
+.vinext/
+.dev.vars
+.env
+.env.*
+!.env.example
+!.env.deploy.example
+!.dev.vars.example
+coverage/
+lcov.info
+*.sqlite
+playwright-report/
+test-results/
+.claude/worktrees/
+.claude/scheduled_tasks.lock
+.DS_Store
+*.tsbuildinfo
+
+# Emitted Hono RPC types (TS project references) — bootstrap with
+# `cd apps/api && pnpm build:types`; frontends consume but never commit.
+apps/api/dist-types/
+
+# Local-only Claude Design export — UI reference / mockups, not a buildable app
+apps/design/

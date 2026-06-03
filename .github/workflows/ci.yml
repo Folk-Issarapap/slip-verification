@@ -1,0 +1,346 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [main, staging]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Lint + Typecheck
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Add swap space
+        # The 2-core/7GB hosted runner OOM-kills the cold `api` typecheck; the
+        # OpenAPI/RPC AppType peaks above physical RAM. Extra swap lets it
+        # complete, and --concurrency=1 below keeps only one tsc resident at a
+        # time.
+        run: |
+          sudo fallocate -l 10G /mnt/ci-extra-swap
+          sudo chmod 600 /mnt/ci-extra-swap
+          sudo mkswap /mnt/ci-extra-swap
+          sudo swapon /mnt/ci-extra-swap
+          free -h
+
+      - name: Lint (Biome)
+        run: pnpm lint
+
+      - name: Typecheck
+        # CI-only: serialize tasks + raise heap, backed by the swap above. Local
+        # `pnpm typecheck` stays parallel at 8GB (root package.json) for speed.
+        run: NODE_OPTIONS=--max-old-space-size=12288 pnpm exec turbo typecheck --concurrency=1
+
+  api-tests:
+    name: API Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run API unit tests
+        run: VITEST_MAX_WORKERS=4 pnpm --filter api test
+
+      - name: Run API integration tests
+        run: BROPAY_RUN_INTEGRATION=1 VITEST_MAX_WORKERS=4 pnpm --filter api run test:integration
+
+  e2e:
+    name: E2E API Tests
+    needs: [check, api-tests]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Create .dev.vars
+        run: |
+          cat > apps/api/.dev.vars << 'EOF'
+          ENVIRONMENT=local
+          ALLOWED_ORIGINS=http://localhost:8787
+          JWT_SECRET=bropay-ci-jwt-secret-min-32-chars-do-not-use-in-prod
+          GOOGLE_CLIENT_ID=placeholder
+          GOOGLE_CLIENT_SECRET=placeholder
+          GOOGLE_REDIRECT_URI=http://localhost:8787/v1/auth/google/callback
+          WEB_URL=http://localhost:8787
+          CF_ACCOUNT_ID=placeholder
+          CF_API_TOKEN=cf_placeholder
+          EMAIL_FROM=noreply@example.com
+          ASSETS_URL=http://localhost:8787
+          ENCRYPTION_KEY=bropay-ci-encryption-key-min-32-chars-do-not-use-in-prod
+          PLATFORM_FEE_INBOUND_PCT=1.5
+          PLATFORM_FEE_INBOUND_FLAT=0
+          PLATFORM_FEE_OUTBOUND_PCT=1.5
+          PLATFORM_FEE_OUTBOUND_FLAT=0
+          PLATFORM_MIN_DEPOSIT=5000
+          PLATFORM_MAX_DEPOSIT=10000000
+          PLATFORM_MIN_WITHDRAWAL=10000
+          PLATFORM_MAX_WITHDRAWAL=50000000
+          PLATFORM_MIN_PAYOUT=1000
+          PLATFORM_MAX_PAYOUT=50000000
+          PLATFORM_MIN_PAYMENT=5000
+          PLATFORM_MAX_PAYMENT=10000000
+          EOF
+
+      - name: Apply D1 migrations
+        run: pnpm --filter api run migrate:local
+
+      - name: Seed database
+        run: pnpm --filter api run db:seed
+
+      - name: Start API dev server
+        run: |
+          cd apps/api
+          nohup npx wrangler dev --port 8787 > /tmp/wrangler.log 2>&1 &
+          echo $! > /tmp/wrangler.pid
+          for i in $(seq 1 30); do
+            if curl -s -o /dev/null -w "%{http_code}" http://localhost:8787/ | grep -q "200"; then
+              echo "API ready on http://localhost:8787"
+              exit 0
+            fi
+            echo "Waiting for API... ($i/30)"
+            sleep 2
+          done
+          echo "API failed to start. Logs:"
+          cat /tmp/wrangler.log
+          exit 1
+
+      - name: Run admin E2E scripts
+        run: |
+          export BROPAY_URL=http://localhost:8787
+          cd scripts/e2e/admin
+          bash run-all.sh > /tmp/e2e-output.txt 2>&1 || true
+
+          FAILED=$(grep -oP 'Failed: \K[0-9]+' /tmp/e2e-output.txt || echo "0")
+          PASSED=$(grep -oP 'Passed: \K[0-9]+' /tmp/e2e-output.txt || echo "0")
+          echo "E2E Results - Passed: $PASSED, Failed: $FAILED"
+          cat /tmp/e2e-output.txt
+
+          if [ "$FAILED" -eq "0" ]; then
+            echo "All E2E scripts passed."
+            exit 0
+          fi
+
+          exit 1
+
+      - name: Run merchant E2E scripts
+        run: |
+          export BROPAY_URL=http://localhost:8787
+          cd scripts/e2e/merchant
+          bash run-all.sh > /tmp/e2e-merchant-output.txt 2>&1 || true
+
+          FAILED=$(grep -oP 'Failed: \K[0-9]+' /tmp/e2e-merchant-output.txt || echo "0")
+          PASSED=$(grep -oP 'Passed: \K[0-9]+' /tmp/e2e-merchant-output.txt || echo "0")
+          echo "Merchant E2E Results - Passed: $PASSED, Failed: $FAILED"
+          cat /tmp/e2e-merchant-output.txt
+
+          if [ "$FAILED" -eq "0" ]; then
+            echo "All merchant E2E scripts passed."
+            exit 0
+          fi
+
+          exit 1
+
+      - name: Stop API dev server
+        if: always()
+        run: |
+          if [ -f /tmp/wrangler.pid ]; then
+            kill $(cat /tmp/wrangler.pid) || true
+            rm -f /tmp/wrangler.pid
+          fi
+
+  deploy-staging:
+    name: Deploy to Staging
+    needs: [check, api-tests]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/staging' && github.event_name == 'push'
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Render wrangler configs
+        run: node scripts/ci/render-wrangler.mjs
+        env:
+          D1_DATABASE_ID: ${{ secrets.D1_DATABASE_ID }}
+          D1_DATABASE_ID_STAGING: ${{ secrets.D1_DATABASE_ID_STAGING }}
+          RATE_LIMIT_KV_ID: ${{ secrets.RATE_LIMIT_KV_ID }}
+          RATE_LIMIT_KV_ID_STAGING: ${{ secrets.RATE_LIMIT_KV_ID_STAGING }}
+          API_DOMAIN: ${{ secrets.API_DOMAIN }}
+          API_DOMAIN_STAGING: ${{ secrets.API_DOMAIN_STAGING }}
+          ADMIN_DOMAIN: ${{ secrets.ADMIN_DOMAIN }}
+          ADMIN_DOMAIN_STAGING: ${{ secrets.ADMIN_DOMAIN_STAGING }}
+          MERCHANT_DOMAIN_STAGING: ${{ secrets.MERCHANT_DOMAIN_STAGING }}
+          RESELLER_DOMAIN_STAGING: ${{ secrets.RESELLER_DOMAIN_STAGING }}
+          DESIGN_SYSTEM_DOMAIN_STAGING: ${{ secrets.DESIGN_SYSTEM_DOMAIN_STAGING }}
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+          ASSETS_URL: ${{ secrets.ASSETS_URL }}
+          ALLOWED_ORIGINS: ${{ secrets.ALLOWED_ORIGINS }}
+          WEB_URL: ${{ secrets.WEB_URL }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_REDIRECT_URI: ${{ secrets.GOOGLE_REDIRECT_URI }}
+
+      - name: Run D1 migrations
+        # Staging shares the same D1 database as production; migrations are
+        # always forward-compatible.
+        run: npx wrangler d1 migrations apply bropay-db --remote
+        working-directory: apps/api
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+
+      - name: Deploy API
+        run: pnpm --filter api run deploy:staging
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+
+      - name: Deploy Admin Staging
+        run: pnpm --filter admin run deploy:staging
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          VITE_API_URL: https://${{ secrets.API_DOMAIN_STAGING }}
+
+      - name: Deploy Merchant Staging
+        run: pnpm --filter merchant run deploy:staging
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          VITE_API_URL: https://${{ secrets.API_DOMAIN_STAGING }}
+
+      - name: Deploy Reseller Staging
+        run: pnpm --filter reseller run deploy:staging
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          VITE_API_URL: https://${{ secrets.API_DOMAIN_STAGING }}
+
+      - name: Deploy Design System Staging
+        run: pnpm --filter design-system run deploy:staging
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          VITE_API_URL: https://${{ secrets.API_DOMAIN_STAGING }}
+
+      - name: Smoke test staging
+        run: |
+          sleep 5
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://${{ secrets.API_DOMAIN_STAGING }}/)
+          echo "API health: $STATUS"
+          if [ "$STATUS" != "200" ]; then echo "Smoke test failed!" && exit 1; fi
+
+  deploy-production:
+    name: Deploy to Production
+    needs: [check, api-tests]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Render wrangler configs
+        run: node scripts/ci/render-wrangler.mjs
+        env:
+          D1_DATABASE_ID: ${{ secrets.D1_DATABASE_ID }}
+          D1_DATABASE_ID_STAGING: ${{ secrets.D1_DATABASE_ID_STAGING }}
+          RATE_LIMIT_KV_ID: ${{ secrets.RATE_LIMIT_KV_ID }}
+          RATE_LIMIT_KV_ID_STAGING: ${{ secrets.RATE_LIMIT_KV_ID_STAGING }}
+          API_DOMAIN: ${{ secrets.API_DOMAIN }}
+          API_DOMAIN_STAGING: ${{ secrets.API_DOMAIN_STAGING }}
+          ADMIN_DOMAIN: ${{ secrets.ADMIN_DOMAIN }}
+          ADMIN_DOMAIN_STAGING: ${{ secrets.ADMIN_DOMAIN_STAGING }}
+          MERCHANT_DOMAIN_STAGING: ${{ secrets.MERCHANT_DOMAIN_STAGING }}
+          RESELLER_DOMAIN_STAGING: ${{ secrets.RESELLER_DOMAIN_STAGING }}
+          DESIGN_SYSTEM_DOMAIN_STAGING: ${{ secrets.DESIGN_SYSTEM_DOMAIN_STAGING }}
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+          ASSETS_URL: ${{ secrets.ASSETS_URL }}
+          ALLOWED_ORIGINS: ${{ secrets.ALLOWED_ORIGINS }}
+          WEB_URL: ${{ secrets.WEB_URL }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_REDIRECT_URI: ${{ secrets.GOOGLE_REDIRECT_URI }}
+
+      - name: Run D1 migrations
+        run: npx wrangler d1 migrations apply bropay-db --remote
+        working-directory: apps/api
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+
+      - name: Deploy API
+        run: pnpm --filter api run deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+
+      - name: Deploy Admin Production
+        run: pnpm --filter admin run deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          VITE_API_URL: https://${{ secrets.API_DOMAIN }}
+
+      - name: Deploy Merchant Production
+        run: pnpm --filter merchant run deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          VITE_API_URL: https://${{ secrets.API_DOMAIN }}
+
+      - name: Deploy Reseller Production
+        run: pnpm --filter reseller run deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          VITE_API_URL: https://${{ secrets.API_DOMAIN }}
+
+      - name: Deploy Design System Production
+        run: pnpm --filter design-system run deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          VITE_API_URL: https://${{ secrets.API_DOMAIN }}
+
+      - name: Smoke test production
+        run: |
+          sleep 5
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://${{ secrets.API_DOMAIN }}/)
+          echo "API health: $STATUS"
+          if [ "$STATUS" != "200" ]; then echo "Smoke test failed!" && exit 1; fi

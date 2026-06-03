@@ -1,0 +1,8 @@
+#!/usr/bin/env sh
+if grep -iqE "^Co-authored-by:.*(claude|cursor|copilot|gpt|aider|codeium|tabnine)" "$1"; then
+  echo ""
+  echo "AI-attribution co-author trailers are banned (CLAUDE.md + .claude/settings.json)."
+  echo "   Remove the 'Co-authored-by:' line from your commit message and try again."
+  echo ""
+  exit 1
+fi

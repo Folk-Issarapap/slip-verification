@@ -1,0 +1,33 @@
+// no-card-className.grit
+//
+// Intended rule: Block simple Card convention violations where JSX pattern matching is enough:
+// - custom `className` on Card primitives
+// - direct DataGrid inside CardContent/raw Card
+// - direct custom elements inside CardTitle
+// - CardDescription inside CardAction
+//
+// NOTE: Biome 2.4's GritQL plugin engine does not yet emit diagnostics for pattern-match
+// rules — the plugin/plugin rule runs but pattern matching is non-functional. Actual
+// enforcement lives in .husky/lint-conventions.mjs (grep on staged files). When Biome's
+// GritQL matcher matures, the pattern below can replace the grep approach automatically.
+
+language js
+
+or {
+  `<Card className=$cls $rest />`,
+  `<DataGridCard className=$cls $rest />`,
+  `<KpiStripCard className=$cls $rest />`,
+  `<CardHeader className=$cls $rest />`,
+  `<CardContent className=$cls $rest />`,
+  `<CardFooter className=$cls $rest />`,
+  `<CardTitle className=$cls $rest />`,
+  `<CardDescription className=$cls $rest />`,
+  `<CardAction className=$cls $rest />`,
+  `<CardContent $props><DataGrid $gridProps /></CardContent>`,
+  `<Card $props><DataGrid $gridProps /></Card>`,
+  `<CardTitle $props><span $spanProps>$children</span></CardTitle>`,
+  `<CardTitle $props><p $pProps>$children</p></CardTitle>`,
+  `<CardTitle $props><button $buttonProps>$children</button></CardTitle>`,
+  `<CardTitle $props><div $divProps>$children</div></CardTitle>`,
+  `<CardAction $props><CardDescription $descriptionProps>$children</CardDescription></CardAction>`
+}

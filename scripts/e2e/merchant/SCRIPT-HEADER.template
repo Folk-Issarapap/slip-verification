@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# ──────────────────────────────────────────────────────────────────────────────
+# E2E Merchant — <Feature name>
+#
+# Prerequisites:
+#   - API worker running (local or staging)
+#   - python3 (JSON helpers)
+#   - curl
+#
+# Usage:
+#   BROPAY_URL=http://localhost:8787 bash scripts/e2e/merchant/<this>.sh
+#
+# Environment (optional unless listed REQUIRED):
+#   BROPAY_URL          Base API URL (default: http://localhost:8787)
+#   BOOTSTRAP_MERCHANT_ID   Override merchant id (REQUIRED if multi-merchant DB)
+#   BOOTSTRAP_MERCHANT_SLUG Override slug lookup (optional)
+#   VERBOSE             Set 1 for extra curl logging (optional)
+#   <SCRIPT_SPECIFIC>   e.g. KBNK_*, WEBHOOK_TUNNEL_URL (document each)
+#
+# External dependencies:
+#   - None | KBNK mock/provider | cloudflared tunnel | RATE_LIMIT_KV (staging/prod HMAC)
+#
+# HMAC (if calling /v1/api/*):
+#   Canonical: METHOD.path+query.timestamp.rawBody
+#   Headers: X-Api-Key, X-Timestamp, X-Signature (hex HMAC-SHA256)
+#   Ref: apps/api/src/middleware/hmac-auth.ts; scripts/e2e/_merchant-lib.sh
+#
+# Endpoints:
+#   <METHOD> <path>
+#   ...
+# ──────────────────────────────────────────────────────────────────────────────

@@ -1,0 +1,267 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@source "../../apps/**/*.{ts,tsx}";
+@source "../**/*.{ts,tsx}";
+
+@custom-variant dark (&:is(.dark *));
+
+/* ── Shadcn baseline tokens ──────────────────────────────────
+   Mirrors the stock shadcn/radix-mira token set so primitives
+   (bg-background, text-foreground, border-border, ring, etc.)
+   resolve at build time. Values follow the radix-mira hues. */
+:root {
+  --radius: 0.625rem;
+
+  --background: oklch(0.985 0.002 250);
+  --foreground: oklch(0.2 0.004 250);
+
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.2 0.004 250);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.2 0.004 250);
+
+  --primary: oklch(0.6 0.09 175);
+  --primary-foreground: oklch(1 0 0);
+
+  --secondary: oklch(0.975 0.002 250);
+  --secondary-foreground: oklch(0.2 0.004 250);
+
+  --muted: oklch(0.97 0.002 250);
+  --muted-foreground: oklch(0.45 0.005 250);
+
+  --accent: oklch(0.955 0.003 250);
+  --accent-foreground: oklch(0.2 0.004 250);
+
+  --destructive: oklch(0.577 0.245 22);
+
+  --border: oklch(0.9 0.003 250);
+  --input: oklch(0.9 0.003 250);
+  --ring: oklch(0.6 0.09 175);
+
+  --chart-1: oklch(0.6 0.09 175);
+  --chart-2: oklch(0.65 0.06 175);
+  --chart-3: oklch(0.55 0.05 175);
+  --chart-4: oklch(0.5 0.04 175);
+  --chart-5: oklch(0.4 0.03 175);
+
+  --sidebar: oklch(1 0 0);
+  --sidebar-foreground: oklch(0.3 0.005 250);
+  --sidebar-primary: oklch(0.6 0.09 175);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.955 0.003 250);
+  --sidebar-accent-foreground: oklch(0.2 0.004 250);
+  --sidebar-border: oklch(0.9 0.003 250);
+  --sidebar-ring: oklch(0.6 0.09 175);
+}
+
+.dark {
+  --background: oklch(0.18 0.005 250);
+  --foreground: oklch(0.96 0.003 250);
+
+  --card: oklch(0.22 0.006 250);
+  --card-foreground: oklch(0.96 0.003 250);
+  --popover: oklch(0.22 0.006 250);
+  --popover-foreground: oklch(0.96 0.003 250);
+
+  --primary: oklch(0.74 0.1 175);
+  --primary-foreground: oklch(0.16 0.02 175);
+
+  --secondary: oklch(0.24 0.005 250);
+  --secondary-foreground: oklch(0.96 0.003 250);
+
+  --muted: oklch(0.27 0.006 250);
+  --muted-foreground: oklch(0.72 0.005 250);
+
+  --accent: oklch(0.3 0.008 250);
+  --accent-foreground: oklch(0.96 0.003 250);
+
+  --destructive: oklch(0.68 0.18 22);
+
+  --border: oklch(0.32 0.006 250);
+  --input: oklch(0.32 0.006 250);
+  --ring: oklch(0.74 0.1 175);
+
+  --chart-1: oklch(0.74 0.1 175);
+  --chart-2: oklch(0.6 0.08 175);
+  --chart-3: oklch(0.5 0.06 175);
+  --chart-4: oklch(0.4 0.05 175);
+  --chart-5: oklch(0.3 0.04 175);
+
+  --sidebar: oklch(0.18 0.005 250);
+  --sidebar-foreground: oklch(0.85 0.002 250);
+  --sidebar-primary: oklch(0.74 0.1 175);
+  --sidebar-primary-foreground: oklch(0.16 0.02 175);
+  --sidebar-accent: oklch(0.27 0.007 250);
+  --sidebar-accent-foreground: oklch(0.96 0.003 250);
+  --sidebar-border: oklch(0.32 0.006 250);
+  --sidebar-ring: oklch(0.74 0.1 175);
+}
+
+/* ── Semantic status tokens ──────────────────────────────────
+   Saturated value + readable foreground partner, per shadcn
+   theming convention. Use `bg-X` + `text-X-foreground` for
+   solid pills, or `bg-X/15` + `text-X` for tinted pills. */
+:root {
+  --success: oklch(0.54 0.12 155);
+  --success-foreground: oklch(0.985 0 0);
+  --info: oklch(0.54 0.1 240);
+  --info-foreground: oklch(0.985 0 0);
+  --warning: oklch(0.56 0.12 75);
+  --warning-foreground: oklch(0.985 0 0);
+  --danger: oklch(0.52 0.16 22);
+  --danger-foreground: oklch(0.985 0 0);
+}
+
+.dark {
+  --success: oklch(0.74 0.14 155);
+  --success-foreground: oklch(0.16 0.01 250);
+  --info: oklch(0.72 0.12 240);
+  --info-foreground: oklch(0.16 0.01 250);
+  --warning: oklch(0.8 0.14 75);
+  --warning-foreground: oklch(0.16 0.01 250);
+  --danger: oklch(0.68 0.18 22);
+  --danger-foreground: oklch(0.985 0 0);
+}
+
+@theme inline {
+  --font-sans: var(--font-geist-sans), var(--font-ibm-plex-thai), "IBM Plex Sans Thai", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-heading: var(--font-geist-sans), var(--font-ibm-plex-thai), "IBM Plex Sans Thai", ui-sans-serif, system-ui, sans-serif;
+  --font-thai: var(--font-ibm-plex-thai), "IBM Plex Sans Thai", ui-sans-serif, system-ui, sans-serif;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-danger: var(--danger);
+  --color-danger-foreground: var(--danger-foreground);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+
+  /* Hero surface — teal + blue halos anchored to the top corners over the card
+     base. Both modes get a tinted wash; dark mode uses deeper saturated stops,
+     light mode uses lighter pastel stops so the gradient stays subtle on white. */
+  .bg-hero {
+    background:
+      radial-gradient(ellipse 60% 60% at 5% 0%, oklch(0.72 0.1 180 / 0.2), transparent 65%),
+      radial-gradient(ellipse 50% 50% at 95% 0%, oklch(0.7 0.08 215 / 0.15), transparent 70%),
+      var(--card);
+  }
+  .dark .bg-hero {
+    background:
+      radial-gradient(ellipse 60% 60% at 5% 0%, oklch(0.5 0.1 180 / 0.28), transparent 65%),
+      radial-gradient(ellipse 50% 50% at 95% 0%, oklch(0.48 0.09 215 / 0.2), transparent 70%),
+      var(--card);
+  }
+}
+
+/* ── Slot-level layout enforcement ────────────────────────────────────────────
+ * Canonical Sheet pattern: bordered SheetHeader at the top, bordered
+ * SheetFooter at the bottom, scrollable body region in between. Applied via
+ * data-slot selectors so every consumer gets the same alignment without
+ * having to remember `className="border-b border-border"` etc. on each
+ * SheetHeader/SheetFooter.
+ *
+ * @layer components < @layer utilities, so any utility class on the consumer
+ * (e.g. `border-0`, `border-warning`) still overrides these defaults.
+ */
+/* ── Slot overrides (utilities layer — must beat component className utilities) */
+@layer utilities {
+  /* Card: replace the baked-in ring with a real border so consumers can target
+     edges with `border-{color}` utilities (e.g. `border-destructive/30`) and
+     box-shadow utilities don't fight a phantom ring shadow. */
+  [data-slot="card"] {
+    --tw-ring-shadow: 0 0 #0000;
+    border: 1px solid var(--color-border);
+  }
+
+  /* AvatarBadge: tuck the status dot inside the circle's visible bounds and
+     drop the baked-in `z-10` so the badge stacks with normal siblings instead
+     of painting above adjacent content. */
+  [data-slot="avatar"] [data-slot="avatar-badge"] {
+    right: 0.25rem;
+    bottom: 0.25rem;
+    z-index: auto;
+  }
+
+  /* Empty states inside a Card render with a dashed outline so they read as
+     "nothing here yet" placeholders rather than bare paragraphs. Padding is
+     compressed from the primitive's default p-6 so empties don't dwarf
+     adjacent content. Full-page empty states (outside a Card) are unaffected. */
+  [data-slot="card-content"] [data-slot="empty"] {
+    border: 1px dashed var(--color-border);
+    padding: 1rem; /* p-4 */
+  }
+}
+
+@layer components {
+  [data-slot="sheet-header"] {
+    @apply border-b border-border;
+  }
+  [data-slot="sheet-footer"] {
+    @apply items-center justify-end border-t border-border;
+  }
+
+  /* Sidebar — canonical font sizes from design spec (.sb-item 12.5 px → text-xs) */
+  [data-slot="sidebar-menu-button"] {
+    font-size: 0.75rem; /* text-xs */
+    line-height: 1rem;
+  }
+  [data-slot="sidebar-group-label"] {
+    font-size: 0.75rem; /* text-xs — design .sb-group 10 px; no smaller Tailwind primitive */
+    line-height: 1rem;
+  }
+}
+
+/* Per-account font-size preference (admin appearance settings). Scales the
+   root rem so the whole UI grows/shrinks proportionally. */
+:root[data-font-scale="small"] { font-size: 15px; }
+:root[data-font-scale="large"] { font-size: 18px; }

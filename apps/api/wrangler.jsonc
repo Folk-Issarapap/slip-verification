@@ -1,0 +1,177 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "bropay-api",
+  "compatibility_date": "2026-02-12",
+  "compatibility_flags": ["nodejs_compat"],
+  "main": "src/index.ts",
+  // Placeholders below are rendered at deploy time by scripts/render-wrangler.mjs from
+  // .env.<env> at the repo root (D1/KV IDs, route domains, and the runtime vars
+  // ASSETS_URL, ALLOWED_ORIGINS, WEB_URL, EMAIL_FROM, CF_ACCOUNT_ID, GOOGLE_*). These
+  // runtime values stay as vars (not wrangler secrets) to avoid var/secret name collisions
+  // on the already-deployed worker; locally, .dev.vars overrides them.
+  // Top-level config is the production env. ENVIRONMENT MUST be set here —
+  // EnvSchema defaults to "local" and rate-limit middleware short-circuits
+  // when ENVIRONMENT === "local", so an unset value disables rate limiting
+  // in production (login/password-reset/webhook endpoints would be
+  // open to brute-force attacks).
+  // CF_API_TOKEN is a wrangler secret — set via: wrangler secret put CF_API_TOKEN
+  "vars": {
+    "ENVIRONMENT": "production",
+    "CF_ACCOUNT_ID": "${CF_ACCOUNT_ID}",
+    "EMAIL_FROM": "${EMAIL_FROM}",
+    "ASSETS_URL": "${ASSETS_URL}",
+    "ALLOWED_ORIGINS": "${ALLOWED_ORIGINS}",
+    "WEB_URL": "${WEB_URL}",
+    "GOOGLE_CLIENT_ID": "${GOOGLE_CLIENT_ID}",
+    "GOOGLE_REDIRECT_URI": "${GOOGLE_REDIRECT_URI}"
+  },
+  // Top-level routes omitted — wrangler dev cannot resolve ${API_ROUTE_DOMAIN}
+  // and tries to proxy through the literal placeholder, breaking local dev.
+  // Production and staging routes live under env.* (rendered
+  // by scripts/render-wrangler.mjs at deploy time, never seen by `wrangler dev`).
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "bropay-db",
+      "database_id": "${API_D1_DATABASE_ID}",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "ASSETS_BUCKET",
+      "bucket_name": "bropay-assets"
+    },
+    {
+      "binding": "SLIPS_BUCKET",
+      "bucket_name": "bropay-settlement-slips"
+    }
+  ],
+  "kv_namespaces": [
+    {
+      "binding": "RATE_LIMIT_KV",
+      "id": "${API_RATE_LIMIT_KV_ID}"
+    }
+  ],
+  "durable_objects": {
+    "bindings": [{ "name": "CHECKOUT_STATUS_ROOMS", "class_name": "CheckoutStatusRoom" }]
+  },
+  "migrations": [
+    {
+      "tag": "checkout-status-room-v1",
+      "new_sqlite_classes": ["CheckoutStatusRoom"]
+    }
+  ],
+  "triggers": {
+    // CF Free plan = 5 crons per account total. Keep this at 2.
+    // All recurring tasks (auto-settle, expire-stale, webhook retries, email
+    // retry, provider health checks) run on EVERY cron fire — so every-5-min
+    // covers them. Only cleanup tasks are gated to the daily 2 AM schedule.
+    "crons": [
+      "0 2 * * *", // Daily at 2 AM UTC — cleanup (sessions, audit logs, password-reset tokens)
+      "*/5 * * * *" // Every 5 minutes — auto-settle, expire-stale, retries, health checks
+    ]
+  },
+  "env": {
+    "production": {
+      "name": "bropay-api",
+      // Wrangler does NOT merge env vars with top-level — env replaces.
+      // Every var the worker reads must be listed here AND at top-level (with its own value).
+      // CF_API_TOKEN is a wrangler secret — set via: wrangler secret put CF_API_TOKEN --env production
+      "vars": {
+        "ENVIRONMENT": "production",
+        "CF_ACCOUNT_ID": "${CF_ACCOUNT_ID}",
+        "EMAIL_FROM": "${EMAIL_FROM}",
+        "ASSETS_URL": "${ASSETS_URL}",
+        "ALLOWED_ORIGINS": "${ALLOWED_ORIGINS}",
+        "WEB_URL": "${WEB_URL}",
+        "GOOGLE_CLIENT_ID": "${GOOGLE_CLIENT_ID}",
+        "GOOGLE_REDIRECT_URI": "${GOOGLE_REDIRECT_URI}"
+      },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "${API_D1_DATABASE_NAME}",
+          "database_id": "${API_D1_DATABASE_ID}",
+          "migrations_dir": "migrations"
+        }
+      ],
+      "r2_buckets": [
+        {
+          "binding": "ASSETS_BUCKET",
+          "bucket_name": "${API_ASSETS_BUCKET_NAME}"
+        },
+        {
+          "binding": "SLIPS_BUCKET",
+          "bucket_name": "${API_SLIPS_BUCKET_NAME}"
+        }
+      ],
+      "kv_namespaces": [
+        {
+          "binding": "RATE_LIMIT_KV",
+          "id": "${API_RATE_LIMIT_KV_ID}"
+        }
+      ],
+      "durable_objects": {
+        "bindings": [{ "name": "CHECKOUT_STATUS_ROOMS", "class_name": "CheckoutStatusRoom" }]
+      },
+      "migrations": [
+        {
+          "tag": "checkout-status-room-v1",
+          "new_sqlite_classes": ["CheckoutStatusRoom"]
+        }
+      ],
+      "routes": [{ "pattern": "${API_ROUTE_DOMAIN}", "custom_domain": true }]
+    },
+    "staging": {
+      "name": "bropay-api-staging",
+      // Wrangler does NOT merge env vars with top-level — env replaces.
+      // Every var the worker reads must be listed here AND at top-level (with its own value).
+      // CF_API_TOKEN is a wrangler secret — set via: wrangler secret put CF_API_TOKEN --env staging
+      "vars": {
+        "ENVIRONMENT": "staging",
+        "CF_ACCOUNT_ID": "${CF_ACCOUNT_ID}",
+        "EMAIL_FROM": "${EMAIL_FROM}",
+        "ASSETS_URL": "${ASSETS_URL}",
+        "ALLOWED_ORIGINS": "${ALLOWED_ORIGINS}",
+        "WEB_URL": "${WEB_URL}",
+        "GOOGLE_CLIENT_ID": "${GOOGLE_CLIENT_ID}",
+        "GOOGLE_REDIRECT_URI": "${GOOGLE_REDIRECT_URI}"
+      },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "${API_D1_DATABASE_NAME}",
+          "database_id": "${API_D1_DATABASE_ID}",
+          "migrations_dir": "migrations"
+        }
+      ],
+      "r2_buckets": [
+        {
+          "binding": "ASSETS_BUCKET",
+          "bucket_name": "${API_ASSETS_BUCKET_NAME}"
+        },
+        {
+          "binding": "SLIPS_BUCKET",
+          "bucket_name": "${API_SLIPS_BUCKET_NAME}"
+        }
+      ],
+      "kv_namespaces": [
+        {
+          "binding": "RATE_LIMIT_KV",
+          "id": "${API_RATE_LIMIT_KV_ID}"
+        }
+      ],
+      "durable_objects": {
+        "bindings": [{ "name": "CHECKOUT_STATUS_ROOMS", "class_name": "CheckoutStatusRoom" }]
+      },
+      "migrations": [
+        {
+          "tag": "checkout-status-room-v1",
+          "new_sqlite_classes": ["CheckoutStatusRoom"]
+        }
+      ],
+      "routes": [{ "pattern": "${API_ROUTE_DOMAIN}", "custom_domain": true }]
+    }
+  }
+}

@@ -1,0 +1,38 @@
+/*
+ * Composite project for type publishing.
+ *
+ * Frontend tsconfigs reference this file via `references: [{ path:
+ * "../api/tsconfig.build.json" }]`, which tells `tsc -b` to build api's
+ * declarations first (into ./dist-types) and then import them from the
+ * package's `exports.types` instead of walking api's source.
+ *
+ * Net effect: frontends type-check against a stable .d.ts surface, so
+ * editing an api file no longer invalidates the entire frontend type graph.
+ * Without this, a one-line change in apps/api triggers a 30s cold rebuild
+ * of every frontend.
+ *
+ * Why a separate tsconfig from the main `tsconfig.json`:
+ *   - `composite: true` requires explicit `include` and slightly stricter
+ *     emit rules. Keeping the main tsconfig untouched preserves the
+ *     existing `pnpm typecheck` behaviour (which includes tests).
+ *   - Tests are excluded here because they bloat dist-types with no
+ *     consumer benefit and may import test-only globals.
+ */
+{
+  "extends": "@workspace/typescript-config/worker.json",
+  "compilerOptions": {
+    "composite": true,
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "noEmit": false,
+    "outDir": "./dist-types",
+    "rootDir": "./src",
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.build.tsbuildinfo",
+    "jsx": "react-jsx",
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": ["src"],
+  "exclude": ["src/test", "src/**/*.test.ts", "src/**/*.test.tsx", "src/**/*.spec.ts"]
+}
