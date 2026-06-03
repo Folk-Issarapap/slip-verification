@@ -6,6 +6,7 @@
     "build": "turbo build",
     "dev:api": "turbo dev --filter=api",
     "dev:admin": "turbo dev --filter=admin",
+    "dev:customer": "turbo dev --filter=customer",
     "lint": "turbo lint",
     "typecheck": "turbo typecheck",
     "test": "turbo test",
